@@ -1,0 +1,373 @@
+#!/usr/bin/env ruby
+# -*- encoding: utf-8 -*-
+
+require "erb"
+
+class Address
+  [:last_name, :first_name, :title, :family_names,
+   :zip, :address1, :address2, :action].each do |m|
+    self.class_eval("def #{m}; @columns['#{m.to_s}']; end")
+  end
+
+  def initialize(hash)
+    @columns = {}
+    update_attributes(hash)
+  end
+
+  def texify(string)
+    string.tr("0-9a-zA-Z", "０-９ａ-ｚＡ-Ｚ").gsub("-", "\\vminus{}")
+  end
+
+  def atena(default_title = "様")
+    title = self.title.to_s
+    title = default_title if !title || title == ""
+
+    name = "#{last_name} & #{first_name}"
+    name += " & #{title}" if title && title != ""
+
+    if family_names != ""
+      family_names.split("/").each do |fn|
+        if fn =~ /(.*);(.*)/
+          fn, fn_title = $1, $2
+        else
+          fn, fn_title = fn, title
+        end
+        name += "\\\\ & #{fn} & " + fn_title
+      end
+    end
+    return name
+  end
+
+  def update_attributes(hash)
+    hash.each do |key, val|
+      @columns[key] = val
+    end
+    return self
+  end
+
+  def [](key)
+    @columns[key]
+  end
+end
+
+class AddressBook
+  include Enumerable
+  attr_accessor :me
+
+  def initialize
+    @addresses = []
+    @me = nil
+  end
+
+  def each
+    @addresses.each do |address|
+      yield address
+    end
+  end
+
+  def <<(o)
+    @addresses << o
+  end
+
+  def to_tex(tex_erb_template)
+    tex_erb = ERB.new(tex_erb_template, nil, "-")
+    address_book = self # binding self = address_book
+    return tex_erb.result(binding)
+  end
+
+  def self.parse_org_table(table)
+    address_book = self.new
+
+    colnames = []
+    table.split("\n").each do |line|
+      # skip horizontal line |--
+      next if line =~ /^\s*\|-/
+      next unless line =~ /^\s*\|/
+
+      cols = line.sub(/^\s*\|/, '').sub(/\|\s*$/, '').split('|').map(&:strip)
+
+      if colnames.empty?
+        # take the first line as column names.
+        colnames = cols
+      else
+        hash = Hash[colnames.zip cols]
+        address = Address.new(hash)
+        address_book << address if address.action == "出"
+        address_book.me = address if address.action == "自"
+      end
+    end
+    return address_book
+  end
+
+end # class AddressBook
+
+
+################################################################
+## main
+################################################################
+if ARGV[0] == "--debug"
+  $DEBUG_FLAG = true
+  ARGV.shift
+end
+
+table = gets(nil)
+ab = AddressBook.parse_org_table(table)
+puts ab.to_tex(DATA.read)
+
+__END__
+% # Make addresser pdf for Japanese Nengajo
+% #
+% # Magic numbers about postcard dimension are defined by Japan post:
+% # http://www.post.japanpost.jp/zipcode/zipmanual/p05.html
+% # http://www.post.japanpost.jp/about/yakkan/1-3.pdf
+% #
+% # Dec 28 2014, Yoshinari Nomura <nom@quickhack.net>
+% #
+% # TODO:
+% #   + Use \kansuji or \rensuji ?
+% #
+\documentclass{jarticle}
+
+\usepackage[deluxe]{otf} % # Use more fonts
+\usepackage{type1cm} % # Freely set the font size
+\usepackage{plext} % # virtical-writing
+\usepackage{color}
+
+\setlength{\unitlength}{1truemm}
+
+% # set paper-size to Hagaki
+\setlength{\textwidth}{100mm}
+\setlength{\textheight}{148mm}
+
+% # set every margin to zero
+\setlength{\oddsidemargin}{-1in}
+\setlength{\evensidemargin}{-1in}
+\setlength{\topmargin}{-1in}
+\setlength{\headheight}{0in}
+\setlength{\headsep}{0in}
+
+% # remove page number
+\pagestyle{empty}
+
+% # inform papersize to dvipdfmx
+\special{papersize=100mm,148mm}
+
+% ################
+% # Adjustment for individual printers
+% ################
+
+\def\xoffset{0}
+\def\yoffset{0}
+
+% ################
+% # Macros for special characters
+% ################
+
+% # \vminus -- vertical hyphen
+%\def\vminus{\UTF{2010}\ignorespaces}
+\def\vminus{\hbox{\raisebox{.1zw}{$-$}}\ignorespaces}
+
+% ################
+% # Global Constants
+% ################
+
+\def\senderboxX{8}
+\def\senderboxY{28}
+\def\senderboxW{22}
+\def\senderboxH{58}
+
+\def\addressboxX{73}
+\def\addressboxY{28}
+\def\addressboxW{17}
+\def\addressboxH{92}
+
+\def\atenaboxX{40}
+\def\atenaboxY{28}
+\def\atenaboxW{30}
+\def\atenaboxH{90}
+
+\def\zipboxX{44.3}
+\def\zipboxY{128}
+\def\zipboxW{5.7}
+\def\zipboxH{8}
+
+\def\zipboxXoffsetA{0}
+\def\zipboxXoffsetB{7}
+\def\zipboxXoffsetC{14}
+\def\zipboxXoffsetD{21.6}
+\def\zipboxXoffsetE{28.4}
+\def\zipboxXoffsetF{35.2}
+\def\zipboxXoffsetG{42.0}
+
+% ################
+% # zip code boxes
+% ################
+
+\def\zipframe{%
+  {\color{red}\framebox(\zipboxW,\zipboxH){}}%
+}
+
+\def\zipnumber#1{%
+  \makebox(\zipboxW,\zipboxH){\textcolor{black}{#1}}%
+}
+
+\def\zip#1#2#3-#4#5#6#7{
+  \put(\zipboxX,\zipboxY){
+    \Large
+    \put(\zipboxXoffsetA,0){\zipnumber{#1}}
+    \put(\zipboxXoffsetB,0){\zipnumber{#2}}
+    \put(\zipboxXoffsetC,0){\zipnumber{#3}}
+    \put(\zipboxXoffsetD,0){\zipnumber{#4}}
+    \put(\zipboxXoffsetE,0){\zipnumber{#5}}
+    \put(\zipboxXoffsetF,0){\zipnumber{#6}}
+    \put(\zipboxXoffsetG,0){\zipnumber{#7}}
+  }}
+
+\def\zipframes{{%
+  \put(\zipboxX,\zipboxY){
+    \linethickness{0.5mm}
+    \put(\zipboxXoffsetA,0){\zipframe}
+    \put(\zipboxXoffsetB,0){\zipframe}
+    \put(\zipboxXoffsetC,0){\zipframe}
+    % # FIXME: 4 => \zipboxH / 2
+    % # FIXME: 1.9 => \zipboxXoffsetD - (\zipboxXoffsetC + \zipboxW)
+    \textcolor{red}{\put(\zipboxXoffsetD,4){\line(-1,0){1.9}}}
+    \linethickness{0.3mm}
+    \put(\zipboxXoffsetD,0){\zipframe}
+    \put(\zipboxXoffsetE,0){\zipframe}
+    \put(\zipboxXoffsetF,0){\zipframe}
+    \put(\zipboxXoffsetG,0){\zipframe}
+  }}}
+
+% ################
+% # address
+% ################
+
+\def\addr#1#2{
+  \put(\addressboxX,\addressboxY){\makebox(\addressboxW,\addressboxH)[rt]{
+      \begin{minipage}<t>[t]{\addressboxH\unitlength}
+         \fontsize{12pt}{0}\selectfont
+         \kanjiskip=2pt
+         % \Large
+         #1
+        \begin{center}
+          #2
+        \end{center}
+    \end{minipage}}}}
+
+% ################
+% # recipient names
+% ################
+
+\def\atena#1{
+  \put(\atenaboxX,\atenaboxY){%
+    % # v-align=Bottom, h-alignottom=Center
+    \begin{minipage}<t>[b][\atenaboxW\unitlength][c]{\atenaboxH\unitlength}
+      \fontsize{22pt}{22pt}\selectfont
+      \kanjiskip=7pt
+      \begin{tabular}[h]{lll}
+        % last_name & first_name & title \\
+        %           & first_name & title \\
+        % :
+       #1
+      \end{tabular}
+    \end{minipage}}}
+
+% ################
+% # framebox for debug
+% ################
+
+\def\stampX{8}
+\def\stampY{90}
+\def\stampW{22}
+\def\stampH{50}
+
+\def\footerX{4}
+\def\footerY{2}
+\def\footerW{92}
+\def\footerH{23.5}
+
+\def\dashline{
+  \multiput(0,0)(0,1.1){5}{\line(0,1){0.55}}
+}
+
+\def\debugframe{
+  \put(\stampX,\stampY){\textcolor{blue}{\framebox(\stampW,\stampH){}}}  % # 切手領域(空ける)
+  \put(\footerX,\footerY){\textcolor{blue}{\framebox(\footerW,\footerH){}}} % # お年玉領域(空ける)
+  \put(\addressboxX, \addressboxY){\textcolor{red}{\framebox(\addressboxW,\addressboxH){}}} % # 住所
+  \put(\atenaboxX, \atenaboxY){\textcolor{red}{\framebox(\atenaboxW,\atenaboxH){}}} % # 宛名
+  \put(\senderboxX, \senderboxY){\textcolor{red}{\framebox(\senderboxW,\senderboxH){}}} % # 送り主
+
+  \zipframes
+  \senderzipframes
+}
+
+% ################
+% # sender
+% ################
+
+\def\sender#1#2{
+  \put(\senderboxX,\senderboxY){\makebox(\senderboxW,\senderboxH)[rt]{%\small
+      \begin{minipage}<t>[t]{\senderboxH\unitlength}
+        \fontsize{9pt}{9pt}\selectfont
+        #1
+        \begin{flushright}
+          \begin{tabular}[h]{lll}
+            #2
+          \end{tabular}
+        \end{flushright}
+      \end{minipage}}}
+}
+
+% ################
+% # sender zip
+% ################
+
+\def\senderzipframes{
+  \put(6,19){\color{red}
+    \put(0,0){\dashbox{0.5}(12,5.5){}}
+    \put(4,0){\dashline}
+    \put(8,0){\dashline}
+    \put(13,0){\dashbox{0.5}(16,5.5){}}
+    \put(17,0){\dashline}
+    \put(21,0){\dashline}
+    \put(25,0){\dashline}
+  }}
+
+\def\senderzip#1#2#3-#4#5#6#7{
+  \put(6,19){
+    \put(0,0){\makebox(4,5.5){#1}}
+    \put(4,0){\makebox(4,5.5){#2}}
+    \put(8,0){\makebox(4,5.5){#3}}
+    \put(13,0){\makebox(4,5.5){#4}}
+    \put(17,0){\makebox(4,5.5){#5}}
+    \put(21,0){\makebox(4,5.5){#6}}
+    \put(25,0){\makebox(4,5.5){#7}}
+  }}
+
+% ################
+% # main
+% ################
+
+\begin{document}
+%\mgfamily % # Hiragino Maru Gothic
+
+<% address_book.each do |address| -%>
+  <% me = address_book.me %>
+  \noindent\begin{picture}(100,148)(\xoffset,\yoffset)
+  <% if $DEBUG_FLAG %>
+    \debugframe
+  <% end %>
+    \zip <%= address.zip %>
+    \addr{<%= address.texify(address.address1) %>}
+         {<%= address.texify(address.address2) %>}
+    \atena{<%= address.atena %>}
+    <% if me %>
+      \senderzip <%= me.zip %>
+      \sender{<%= me.texify(me.address1) %>}{<%= me.atena("") %>}
+    <% end %>
+  \end{picture}
+  \newpage
+<% end %>
+
+\end{document}
