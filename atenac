@@ -14,28 +14,48 @@ class Address
     update_attributes(hash)
   end
 
-  def texify(string)
-    string.tr("0-9a-zA-Z", "０-９ａ-ｚＡ-Ｚ").gsub("-", "\\vminus{}")
+  def texify(string, rotate = false)
+    string = string.tr("0-9a-zA-Z", "０-９ａ-ｚＡ-Ｚ").gsub("-", "\\vminus{}")
+    string = string.gsub(/[ー「」．。]/, "\\pbox<z>{\\0}") if rotate
+    return string
   end
 
-  def atena(default_title = "様")
+  def atena_orig(default_title = "様")
     title = self.title.to_s
     title = default_title if !title || title == ""
 
     name = "#{last_name} & #{first_name}"
-    name += " & #{title}" if title && title != ""
+    name += " & \\hbox{\\kanjiskip=0pt #{title}}" if title && title != ""
 
     if family_names != ""
       family_names.split("/").each do |fn|
         if fn =~ /(.*);(.*)/
           fn, fn_title = $1, $2
         else
-          fn, fn_title = fn, title
+          fn, fn_title = fn, default_title
         end
-        name += "\\\\ & #{fn} & " + fn_title
+        name += "\\\\ & #{fn} & \\hbox{\\kanjiskip=0pt #{fn_title}}"
       end
     end
     return name
+  end
+
+  def atena(default_title = "様")
+    title = self.title.to_s
+    title = default_title if !title || title == ""
+
+    atena_string = atena_entry(last_name, first_name, title)
+    return atena_string if family_names.to_s == ""
+
+    family_names.split("/").each do |fn|
+      if fn =~ /(.*);(.*)/
+        fn, fn_title = $1, $2
+      else
+        fn, fn_title = fn, default_title
+      end
+      atena_string += atena_entry("", fn, fn_title)
+    end
+    return atena_string
   end
 
   def update_attributes(hash)
@@ -48,6 +68,11 @@ class Address
   def [](key)
     @columns[key]
   end
+
+  def atena_entry(last_name, first_name, title)
+    return "\\atenaentry{#{last_name}}{#{first_name}}{#{title}}"
+  end
+
 end
 
 class AddressBook
@@ -101,13 +126,47 @@ class AddressBook
 
 end # class AddressBook
 
+def usage(exit_status = 1)
+  STDERR.print "#{File.basename($0)} [--debug] [--fontfile=FILE] ADDRESS.org\n"
+  exit exit_status
+end
+
+def die(error_message)
+  STDERR.print error_message, "\n"
+  exit 1
+end
 
 ################################################################
 ## main
 ################################################################
-if ARGV[0] == "--debug"
-  $DEBUG_FLAG = true
+
+while /^-/ =~ ARGV[0]
+  case ARGV[0]
+  when /^--debug/
+    $DEBUG_FLAG = true
+  when /^--fontfile=(.*)/
+    $OPT_FONTFILE = $1
+  when /^--rotate/
+    $OPT_ROTATE = true
+  else
+    usage()
+  end
   ARGV.shift
+end
+
+if $OPT_FONTFILE
+  die "fontfile #{$OPT_FONTFILE} not found." unless File.exist?($OPT_FONTFILE)
+
+  dirname = File.dirname($OPT_FONTFILE)
+  extname = File.extname($OPT_FONTFILE)
+
+  case extname
+  when /^\.ttf/i
+    envname = "TTFONTS"
+  when /^\.otf/i
+    envname = "OPENTYPEFONTS"
+  end
+  STDERR.print "#{envname}=#{dirname}: dvipdfmx file.dvi\n"
 end
 
 table = gets(nil)
@@ -126,12 +185,19 @@ __END__
 % # TODO:
 % #   + Use \kansuji or \rensuji ?
 % #
-\documentclass{jarticle}
+\documentclass[dvipdfmx]{jarticle}
 
-\usepackage[deluxe]{otf} % # Use more fonts
 \usepackage{type1cm} % # Freely set the font size
 \usepackage{plext} % # virtical-writing
 \usepackage{color}
+\usepackage{graphicx}
+\usepackage{adjustbox}
+
+% http://zrbabbler.sp.land.to/pxchfon.html
+\usepackage[noalphabet]{pxchfon}
+<%- if $OPT_FONTFILE %>
+\setminchofont{<%= File.basename($OPT_FONTFILE) %>}
+<%- end -%>
 
 \setlength{\unitlength}{1truemm}
 
@@ -152,6 +218,14 @@ __END__
 % # inform papersize to dvipdfmx
 \special{papersize=100mm,148mm}
 
+\makeatletter
+\def\newdimXYWH#1=(#2,#3,#4,#5){
+  \@namedef{#1X}{#2}
+  \@namedef{#1Y}{#3}
+  \@namedef{#1W}{#4}
+  \@namedef{#1H}{#5}}
+\makeatother
+
 % ################
 % # Adjustment for individual printers
 % ################
@@ -164,32 +238,16 @@ __END__
 % ################
 
 % # \vminus -- vertical hyphen
-%\def\vminus{\UTF{2010}\ignorespaces}
 \def\vminus{\hbox{\raisebox{.1zw}{$-$}}\ignorespaces}
 
 % ################
 % # Global Constants
 % ################
 
-\def\senderboxX{8}
-\def\senderboxY{28}
-\def\senderboxW{22}
-\def\senderboxH{58}
-
-\def\addressboxX{73}
-\def\addressboxY{28}
-\def\addressboxW{17}
-\def\addressboxH{92}
-
-\def\atenaboxX{40}
-\def\atenaboxY{28}
-\def\atenaboxW{30}
-\def\atenaboxH{90}
-
-\def\zipboxX{44.3}
-\def\zipboxY{128}
-\def\zipboxW{5.7}
-\def\zipboxH{8}
+\newdimXYWH senderbox=(8,28,22,58)
+\newdimXYWH addressbox=(73,28,17,92)
+\newdimXYWH atenabox=(40,28,30,90)
+\newdimXYWH zipbox=(44.3,128,5.7,8)
 
 \def\zipboxXoffsetA{0}
 \def\zipboxXoffsetB{7}
@@ -261,45 +319,42 @@ __END__
 
 \def\atena#1{
   \put(\atenaboxX,\atenaboxY){%
-    % # v-align=Bottom, h-alignottom=Center
+    % # v-align=Bottom, h-align=Center
     \begin{minipage}<t>[b][\atenaboxW\unitlength][c]{\atenaboxH\unitlength}
-      \fontsize{22pt}{22pt}\selectfont
-      \kanjiskip=7pt
-      \begin{tabular}[h]{lll}
-        % last_name & first_name & title \\
-        %           & first_name & title \\
+      \fontsize{27pt}{0pt}\selectfont % 文字サイズ 行送り
+      \kanjiskip=17pt % 文字間隔
+      \begin{adjustbox}{max totalsize={\atenaboxH\unitlength}{\atenaboxW\unitlength}}
+      \begin{tabular}[h]{llll}
+        % \atenaentry{last_name}{first_name}{title}
         % :
        #1
       \end{tabular}
+      \end{adjustbox}
     \end{minipage}}}
+
+\def\atenaentry#1#2#3{#1 & \hbox{\hspace{0.5zw}} & #2 & \hbox{\kanjiskip=0pt #3}\\}
 
 % ################
 % # framebox for debug
 % ################
 
-\def\stampX{8}
-\def\stampY{90}
-\def\stampW{22}
-\def\stampH{50}
-
-\def\footerX{4}
-\def\footerY{2}
-\def\footerW{92}
-\def\footerH{23.5}
+\newdimXYWH stamp=(8,90,22,50)
+\newdimXYWH footer=(4,2,92,23.5)
 
 \def\dashline{
   \multiput(0,0)(0,1.1){5}{\line(0,1){0.55}}
 }
 
 \def\debugframe{
+  <%- if $DEBUG_FLAG -%>
   \put(\stampX,\stampY){\textcolor{blue}{\framebox(\stampW,\stampH){}}}  % # 切手領域(空ける)
   \put(\footerX,\footerY){\textcolor{blue}{\framebox(\footerW,\footerH){}}} % # お年玉領域(空ける)
   \put(\addressboxX, \addressboxY){\textcolor{red}{\framebox(\addressboxW,\addressboxH){}}} % # 住所
   \put(\atenaboxX, \atenaboxY){\textcolor{red}{\framebox(\atenaboxW,\atenaboxH){}}} % # 宛名
   \put(\senderboxX, \senderboxY){\textcolor{red}{\framebox(\senderboxW,\senderboxH){}}} % # 送り主
-
   \zipframes
   \senderzipframes
+  <%- end -%>
 }
 
 % ################
@@ -307,16 +362,23 @@ __END__
 % ################
 
 \def\sender#1#2{
-  \put(\senderboxX,\senderboxY){\makebox(\senderboxW,\senderboxH)[rt]{%\small
-      \begin{minipage}<t>[t]{\senderboxH\unitlength}
-        \fontsize{9pt}{9pt}\selectfont
-        #1
-        \begin{flushright}
-          \begin{tabular}[h]{lll}
-            #2
-          \end{tabular}
-        \end{flushright}
-      \end{minipage}}}
+  \put(\senderboxX,\senderboxY){
+    \begin{minipage}<t>[b][\senderboxW\unitlength][c]{\senderboxH\unitlength}
+      \fontsize{9pt}{9pt}\selectfont
+      #1
+      \begin{flushright}
+        \kanjiskip=4pt
+        \begin{tabular}[h]{llll}
+          #2
+        \end{tabular}
+      \end{flushright}
+    \end{minipage}}}
+
+\def\senderaddress{
+  <%- if me = address_book.me -%>
+  \senderzip <%= me.zip %>
+  \sender{<%= me.texify(me.address1, $OPT_ROTATE) %>}{<%= me.atena("") %>}
+  <%- end -%>
 }
 
 % ################
@@ -346,28 +408,29 @@ __END__
   }}
 
 % ################
+% # sender zip
+% ################
+
+\def\hagaki#1{
+  \noindent
+  \begin{picture}(100,148)(\xoffset,\yoffset)
+  \debugframe
+  \senderaddress
+  #1
+  \end{picture}
+  \newpage
+}
+
+% ################
 % # main
 % ################
 
 \begin{document}
-%\mgfamily % # Hiragino Maru Gothic
-
-<% address_book.each do |address| -%>
-  <% me = address_book.me %>
-  \noindent\begin{picture}(100,148)(\xoffset,\yoffset)
-  <% if $DEBUG_FLAG %>
-    \debugframe
-  <% end %>
+<%- address_book.each do |address| -%>
+  \hagaki{
     \zip <%= address.zip %>
-    \addr{<%= address.texify(address.address1) %>}
-         {<%= address.texify(address.address2) %>}
-    \atena{<%= address.atena %>}
-    <% if me %>
-      \senderzip <%= me.zip %>
-      \sender{<%= me.texify(me.address1) %>}{<%= me.atena("") %>}
-    <% end %>
-  \end{picture}
-  \newpage
-<% end %>
+    \addr{<%= address.texify(address.address1, $OPT_ROTATE) %>}{<%= address.texify(address.address2, $OPT_ROTATE) %>}
+    \atena{<%= address.atena %>}}
 
+<%- end -%>
 \end{document}

@@ -68,14 +68,18 @@
   1) 現状，住所のレンダラは，address1 と address2 を改行位置決定に
      使用しています．本来は，文字列の長さから自動的に判断すべきでしょう．
   2) zip は，半角で 999-9999 の形式でなければなりません．
-  3) 生成された宛名の苗字と名前のバランスがイマイチです．
-  4) 入力には，住所録に関係ないテーブルを含んではいけません．
+  3) 入力には，住所録に関係ないテーブルを含んではいけません．
 
 * コマンドライン書式
-  : atenac [--debug] file.org > file.tex
+  : atenac [--debug] [--rotate] [--fontfile=/path/to/font.{ttf,otf}] file.org > file.tex
 
   + オプション:
     + =--debug= :: デバッグのために郵便番号等の枠線を入れます
+    + =--rorate= :: 縦書き用代替グリフを持っていないフォントのために長音などを90度回転します
+    + =--fontfile= :: フォントファイルを直接 (ttf か otf) を指定します．
+                      これを指定した場合は，dvipdfmx が font を見付けられるように環境変数
+                      =TTFONTS= (ttf の場合) か =OPENTYPEFONTS= (otf の場合) に =/path/to= を追加して下さい．
+                      : $ TTFONTS=/path/to: dvipdfmx file.dvi
 
 * 住所録 サンプル
   | id | last_name | first_name | title | family_names                   |      zip | address1                | address2        | action | 昨年自分 | 昨年相手 | phonetic_last_name | phonetic_first_name | category | description |

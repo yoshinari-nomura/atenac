@@ -23,3 +23,99 @@
   #+END_SRC
 
   と定義して，=-= を =\vminus{}= と置き換えることにした．
+
+* Mac版宛名職人のフォントを使いたい
+** 概要
+
+   以下，株式会社アジェンダさんの「宛名職人 Ver.18」に付属するフォント
+   「AGENDA人名行書体L1」を使いたいと思って試行錯誤した記録．
+
+   一見うまくいくように見えるが，
+
+   : dvipdfmx:warning: GSUB feature vrt2/vert not found.
+
+   と出てしまって，音引きが縦に向いてくれない．
+   最近の宛名職人の付属フォントでは，vert (縦組用の代替フォント)
+   対応しているのか．買い換えて試す勇気がないので，
+   atenac 中では，音引「ー」 を 90度回転するコードを入れて凌ぐことに．
+
+** Truetype フォントの取り出し
+   AGENDA人名行書体L1 は， =/Library/Fonts/AGENDA人名行書体L1=
+   としてインストールされているようだが，
+   このファイルを ls で見ると，サイズ 0 に見える．
+   フォントのデータそのものは，いわゆる Resourcefork に入っているらしい．
+   =..namedfork/rsrc= というデータがあると信じて
+   cat すると，以下のように取り出せるらしい．
+
+   #+BEGIN_SRC shell-script
+     $ cat /Library/Fonts/AGENDA人名行書体L1/..namedfork/rsrc > tmp.font
+   #+END_SRC
+
+   これは，そのまま ttf ではないようなので，ここから ttf
+   ファイルを取り出すコマンド (fondu) を使うことに．
+
+   #+BEGIN_SRC shell-script
+    $ ports install fondu
+    $ fondu tmp.font
+    $ ls
+
+    AGENDAJinmeiGyoshotaiL1.ttf
+   #+END_SRC
+
+** TeX での利用
+
+   本格的にフォントをインストールするのは面倒なので，
+   pxchfon パッケージでフォントを置き換えるといいらしい．
+
+   #+BEGIN_SRC latex
+     \usepackage[noalphabet]{pxchfon}
+     \setminchofont{AGENDAJinmeiGyoshotaiL1.ttf}
+   #+END_SRC
+
+   のように書いておくと，明朝を所望のフォントで置き換えた
+   dvi を吐いてくれる．
+
+** dvipdfmx の設定
+
+   できあがった dvi を pdf に変換するためにha,
+   フォントファイル (ttf) を dvipdfmx が見付けられなければならない．
+   このためには，texmf.cnf ファイルを見て，正しい path に
+   AGENDAJinmeiSeikaishotaiL1.ttf を置くか，環境変数 TTFONTS を設定して
+   path を一時的に追加してやればいい．例えば，
+
+   #+BEGIN_SRC shell-script
+     $ TTFONTS=:/path/to/font kpsewhich AGENDAJinmeiSeikaishotaiL1.ttf
+
+     /path/to/font/AGENDAJinmeiSeikaishotaiL1.ttf
+   #+END_SRC
+
+   として，正しい path が表示されるなら，
+
+   #+BEGIN_SRC shell-script
+     $ TTFONTS=:/path/to/font dvipdfmx file.dvi
+   #+END_SRC
+
+   とできる．
+
+   同様に otf フォントの場合は， =OPENTYPEFONTS= を設定すればよい．
+
+** atenac での実際の利用
+
+   #+BEGIN_SRC shell-script
+     $ ls
+
+     AGENDAJinmeiGyoshotaiL1.ttf
+     README.org
+
+     $ atenac --rotate --fontfile=AGENDAJinmeiGyoshotaiL1.ttf README.org > atena.tex
+     $ platex atena.tex
+     $ TTFONTS=.: dvipdfmx atena.dvi
+     $ open atena.pdf
+   #+END_SRC
+
+   ただし，以下のような警告が出る．
+   : dvipdfmx:warning: GSUB feature vrt2/vert not found.
+
+   =--rotate= は，長音などのフォントを 90度回転させてそれらしく見せるオプション．
+   この警告が出る場合は，フォントが縦書き用の置き換えフォントを用意していないので，
+   =--rotate= を試してみる価値がある．
