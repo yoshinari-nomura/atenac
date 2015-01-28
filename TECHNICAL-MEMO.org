@@ -22,7 +22,7 @@
     \def\vminus{\hbox{\raisebox{.1zw}{$-$}}\ignorespaces}
   #+END_SRC
 
-  と定義して，=-= を =\vminus{}= と置き換えることにした．
+  と定義して， =-= を =\vminus{}= と置き換えることにした．
 
 * Mac版宛名職人のフォントを使いたい
 ** 概要
@@ -35,9 +35,9 @@
    : dvipdfmx:warning: GSUB feature vrt2/vert not found.
 
    と出てしまって，音引きが縦に向いてくれない．
-   最近の宛名職人の付属フォントでは，vert (縦組用の代替フォント)
-   対応しているのか．買い換えて試す勇気がないので，
-   atenac 中では，音引「ー」 を 90度回転するコードを入れて凌ぐことに．
+   最近の宛名職人の付属フォントでは，vert (縦組用の代替グリフ)
+   対応しているのかしら．買い換えて試す勇気がないので，
+   atenac 中では，音引「ー」 を 90度回転するコードを入れて凌ぐことにした．
 
 ** Truetype フォントの取り出し
    AGENDA人名行書体L1 は， =/Library/Fonts/AGENDA人名行書体L1=
@@ -77,10 +77,10 @@
 
 ** dvipdfmx の設定
 
-   できあがった dvi を pdf に変換するためにha,
+   できあがった dvi を pdf に変換するには，
    フォントファイル (ttf) を dvipdfmx が見付けられなければならない．
    このためには，texmf.cnf ファイルを見て，正しい path に
-   AGENDAJinmeiSeikaishotaiL1.ttf を置くか，環境変数 TTFONTS を設定して
+   AGENDAJinmeiSeikaishotaiL1.ttf を置くか，環境変数 =TTFONTS= を設定して
    path を一時的に追加してやればいい．例えば，
 
    #+BEGIN_SRC shell-script
@@ -97,7 +97,7 @@
 
    とできる．
 
-   同様に otf フォントの場合は， =OPENTYPEFONTS= を設定すればよい．
+   同様に otf フォントの場合は， =OPENTYPEFONTS= を設定すればいい．
 
 ** atenac での実際の利用
 
@@ -113,9 +113,9 @@
      $ open atena.pdf
    #+END_SRC
 
-   ただし，以下のような警告が出る．
+   以下のような警告が出るが， =--rotate= オプションのおかげで問題がないはず．
    : dvipdfmx:warning: GSUB feature vrt2/vert not found.
 
    =--rotate= は，長音などのフォントを 90度回転させてそれらしく見せるオプション．
-   この警告が出る場合は，フォントが縦書き用の置き換えフォントを用意していないので，
+   この警告は，フォントが縦書き用の置き換えグリフを用意していないという意味なので，
    =--rotate= を試してみる価値がある．

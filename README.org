@@ -14,10 +14,9 @@
 #+OPTIONS: tags:t
 #+LANGUAGE: ja
 
-* はじめに
-  本文書は，宛名書スクリプト atenac の利用方法を説明しています．
-
-  atenac は，org-mode のテーブルを含むテキストを入力として，
+* atenac とは
+  atenac は，Ruby + TeX を使った葉書の宛名書スクリプトです．
+  org-mode のテーブルを含むテキストを入力として，
   主に年賀状に利用する宛名面の PDF を生成します．
   スクリプトは，Ruby で記述され，バックエンドに TeX (platex) を利用しています．
   想定するユーザは，Emacs (org-mode), TeX, Ruby を普段から利用する人です．
@@ -26,10 +25,10 @@
   宛名 PDF を生成してみることができます．
 
   #+BEGIN_SRC shell-script
-  $ atenac README.org > atena.tex
-  $ platex atena.tex
-  $ dvipdfmx atena.dvi
-  $ open atena.pdf
+    $ atenac README.org > atena.tex
+    $ platex atena.tex
+    $ dvipdfmx atena.dvi
+    $ open atena.pdf
   #+END_SRC
 
 * 宛名テーブルの書式
@@ -65,8 +64,8 @@
     + それ以外 :: 無視されます．
 
 * 各種制限
-  1) 現状，住所のレンダラは，address1 と address2 を改行位置決定に
-     使用しています．本来は，文字列の長さから自動的に判断すべきでしょう．
+  1) 現状，住所のレンダラは，address1 と address2
+     を改行位置決定に使用しています．本来は，文字列の長さから自動的に判断すべきでしょう．
   2) zip は，半角で 999-9999 の形式でなければなりません．
   3) 入力には，住所録に関係ないテーブルを含んではいけません．
 
@@ -75,8 +74,8 @@
 
   + オプション:
     + =--debug= :: デバッグのために郵便番号等の枠線を入れます
-    + =--rorate= :: 縦書き用代替グリフを持っていないフォントのために長音などを90度回転します
-    + =--fontfile= :: フォントファイルを直接 (ttf か otf) を指定します．
+    + =--rotate= :: 縦書き用代替グリフを持っていないフォントのために長音などを90度回転します
+    + =--fontfile= :: フォントファイルを直接 (ttf か otf) 指定します．
                       これを指定した場合は，dvipdfmx が font を見付けられるように環境変数
                       =TTFONTS= (ttf の場合) か =OPENTYPEFONTS= (otf の場合) に =/path/to= を追加して下さい．
                       : $ TTFONTS=/path/to: dvipdfmx file.dvi
