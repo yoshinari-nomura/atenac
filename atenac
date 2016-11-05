@@ -3,6 +3,68 @@
 
 require "erb"
 
+class TableParser
+  def self.parse(source_string, type = :org)
+    address_book = AddressBook.new
+
+    parser =
+      case type
+      when :org
+        ORG.new(source_string)
+      when :csv
+        CSV.new(source_string)
+      else
+        Raise "Unknown table type #{type}."
+      end
+
+    parser.each_row do |address|
+      address_book << address if address.action == "出"
+      address_book.me = address if address.action == "自"
+    end
+
+    return address_book
+  end
+
+  class Base
+    attr_reader :source_string
+
+    def initialize(source_string)
+      @source_string = source_string
+    end
+  end
+
+  class CSV < Base
+    def each_row(&block)
+      require "csv"
+      lines = source_string.force_encoding("Shift_JIS").encode("UTF-8")
+
+      ::CSV.parse(lines, :headers => true) do |row|
+        yield Address.new(row.to_hash)
+      end
+    end
+  end
+
+  class ORG < Base
+    def each_row(&block)
+      colnames = []
+      source_string.split("\n").each do |line|
+        next if line =~ /^\s*\|-/    # skip horizontal line |--
+        next unless line =~ /^\s*\|/ # skip non-table line
+
+        cols = line.sub(/^\s*\|/, '').sub(/\|\s*$/, '').split('|').map(&:strip)
+
+        if colnames.empty?
+          # take the first line as column names.
+          colnames = cols
+        else
+          yield Address.new(Hash[colnames.zip cols])
+        end
+      end
+    end # each_rows
+  end # class ORG
+
+end # class Table
+
 class Address
   [:last_name, :first_name, :title, :family_names,
    :zip, :address1, :address2, :action].each do |m|
@@ -18,26 +80,6 @@ class Address
     string = string.tr("0-9a-zA-Z", "０-９ａ-ｚＡ-Ｚ").gsub("-", "\\vminus{}")
     string = string.gsub(/[ー「」．。]/, "\\pbox<z>{\\0}") if rotate
     return string
-  end
-
-  def atena_orig(default_title = "様")
-    title = self.title.to_s
-    title = default_title if !title || title == ""
-
-    name = "#{last_name} & #{first_name}"
-    name += " & \\hbox{\\kanjiskip=0pt #{title}}" if title && title != ""
-
-    if family_names != ""
-      family_names.split("/").each do |fn|
-        if fn =~ /(.*);(.*)/
-          fn, fn_title = $1, $2
-        else
-          fn, fn_title = fn, default_title
-        end
-        name += "\\\\ & #{fn} & \\hbox{\\kanjiskip=0pt #{fn_title}}"
-      end
-    end
-    return name
   end
 
   def atena(default_title = "様")
@@ -60,7 +102,7 @@ class Address
 
   def update_attributes(hash)
     hash.each do |key, val|
-      @columns[key] = val
+      @columns[key] = val.to_s
     end
     return self
   end
@@ -100,34 +142,20 @@ class AddressBook
     return tex_erb.result(binding)
   end
 
-  def self.parse_org_table(table)
-    address_book = self.new
-
-    colnames = []
-    table.split("\n").each do |line|
-      # skip horizontal line |--
-      next if line =~ /^\s*\|-/
-      next unless line =~ /^\s*\|/
-
-      cols = line.sub(/^\s*\|/, '').sub(/\|\s*$/, '').split('|').map(&:strip)
-
-      if colnames.empty?
-        # take the first line as column names.
-        colnames = cols
-      else
-        hash = Hash[colnames.zip cols]
-        address = Address.new(hash)
-        address_book << address if address.action == "出"
-        address_book.me = address if address.action == "自"
-      end
-    end
-    return address_book
-  end
-
 end # class AddressBook
 
 def usage(exit_status = 1)
-  STDERR.print "#{File.basename($0)} [--debug] [--fontfile=FILE] ADDRESS.org\n"
+  name = File.basename($0)
+  spc = " " * name.length
+  STDERR.print <<EOF
+Usage: #{File.basename($0)} [--debug] [--rotate] [--table-type=TYPE]
+       #{spc} [--fontfile=FILE] ADDRESS.org > ADDRESS.tex
+
+  + TYPE: "org" (default) or "csv"
+  + FILE: /path/to/font.{ttf,otf}
+    You need to set environment variable TTFONTS or OPENTYPEFONTS
+    to "/path/to:" on invoking dvipdfmx.
+EOF
   exit exit_status
 end
 
@@ -140,6 +168,11 @@ end
 ## main
 ################################################################
 
+$OPT_TABLE_TYPE = :org
+$OPT_FONTFILE   = nil
+$OPT_ROTATE     = false
+$DEBUG_FLAG     = false
+
 while /^-/ =~ ARGV[0]
   case ARGV[0]
   when /^--debug/
@@ -148,6 +181,8 @@ while /^-/ =~ ARGV[0]
     $OPT_FONTFILE = $1
   when /^--rotate/
     $OPT_ROTATE = true
+  when /^--table-type=(org|csv)$/
+    $OPT_TABLE_TYPE = $1.to_sym
   else
     usage()
   end
@@ -169,8 +204,8 @@ if $OPT_FONTFILE
   STDERR.print "#{envname}=#{dirname}: dvipdfmx file.dvi\n"
 end
 
-table = gets(nil)
-ab = AddressBook.parse_org_table(table)
+ab  = TableParser.parse(gets(nil), $OPT_TABLE_TYPE)
+# ab    = AddressBook.parse_table(table)
 puts ab.to_tex(DATA.read)
 
 __END__
