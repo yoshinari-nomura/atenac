@@ -16,7 +16,7 @@
 
 * atenac とは
   atenac は，Ruby + TeX を使った葉書の宛名書スクリプトです．
-  org-mode のテーブルを含むテキストを入力として，
+  org-mode のテーブルを含むテキストもしくは，CSV ファイルを入力として，
   主に年賀状に利用する宛名面の PDF を生成します．
   スクリプトは，Ruby で記述され，バックエンドに TeX (platex) を利用しています．
   想定するユーザは，Emacs (org-mode), TeX, Ruby を普段から利用する人です．
@@ -70,11 +70,12 @@
   3) 入力には，住所録に関係ないテーブルを含んではいけません．
 
 * コマンドライン書式
-  : atenac [--debug] [--rotate] [--fontfile=/path/to/font.{ttf,otf}] file.org > file.tex
+  : atenac [--debug] [--rotate] [--table-type=TYPE] [--fontfile=/path/to/font.{ttf,otf}] file.org > file.tex
 
   + オプション:
     + =--debug= :: デバッグのために郵便番号等の枠線を入れます
     + =--rotate= :: 縦書き用代替グリフを持っていないフォントのために長音などを90度回転します
+    + =--table-type= :: =org= (デフォルト) か =csv= を指定します．
     + =--fontfile= :: フォントファイルを直接 (ttf か otf) 指定します．
                       これを指定した場合は，dvipdfmx が font を見付けられるように環境変数
                       =TTFONTS= (ttf の場合) か =OPENTYPEFONTS= (otf の場合) に =/path/to= を追加して下さい．
