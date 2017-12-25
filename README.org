@@ -25,13 +25,19 @@
   宛名 PDF を生成してみることができます．
 
   #+BEGIN_SRC shell-script
+    $ atenac --pdf README.org > example.pdf
+    $ open example.pdf
+  #+END_SRC
+
+  あるいは，
+  #+BEGIN_SRC shell-script
     $ atenac README.org > example.tex
     $ platex example.tex
     $ dvipdfmx example.dvi
     $ open example.pdf
   #+END_SRC
 
-  こんな感じになります: [[file:examples/example.pdf][example.pdf]]．(=--debug= 付き: [[file:examples/example-debug.pdf][example-debug.pdf]])
+  すると，こんな感じになります: [[file:examples/example.pdf][example.pdf]]．(=--debug= 付き: [[file:examples/example-debug.pdf][example-debug.pdf]])
 
 * インストール
 ** Ruby/pLaTeX 環境が手元にある場合
@@ -45,9 +51,7 @@
    #+BEGIN_SRC shell-script
      $ docker run -it --rm -v $PWD:/workdir nom4476/atenac
      (Invoke bash in Docker container)
-     # atenac address-file.org > atena.tex
-     # platex atena.tex
-     # dvipdfmx atena.dvi
+     # atenac --pdf address-file.org > atena.pdf
    #+END_SRC
 
    なお Docker は，以下からインストールできます．
@@ -55,16 +59,18 @@
    + [[https://store.docker.com/editions/community/docker-ce-desktop-windows][Docker Community Edition for Windows - Docker Store]]
 
 * コマンドライン書式
-  : atenac [--debug] [--rotate] [--table-type=TYPE] [--fontfile=/path/to/font.{ttf,otf}] file.org > file.tex
+  : atenac [--debug] [--rotate] [--table-type=TYPE] [--pdf] [--fontfile=/path/to/font.{ttf,otf}] file.org > file.tex
 
   + オプション:
     + =--debug= :: デバッグのために郵便番号等の枠線を入れます
     + =--rotate= :: 縦書き用代替グリフを持っていないフォントのために長音などを90度回転します
     + =--table-type= :: =org= (デフォルト) か =csv= を指定します．
+    + =--pdf= :: TeX (デフォルト) ではなく，PDF を出力します．
     + =--fontfile= :: フォントファイルを直接 (ttf か otf) 指定します．
                       これを指定した場合は，dvipdfmx が font を見付けられるように環境変数
                       =TTFONTS= (ttf の場合) か =OPENTYPEFONTS= (otf の場合) に =/path/to= を追加して下さい．
                       : $ TTFONTS=/path/to: dvipdfmx file.dvi
+                      =--pdf= を指定時は不要です (dvipdfmx 使う際に内部で追加されています)．
 
 * 宛名テーブルの書式
   atenac に与える org-mode テーブルの書式を以下に説明します．

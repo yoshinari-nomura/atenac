@@ -144,6 +144,46 @@ class AddressBook
 
 end # class AddressBook
 
+
+class TeX
+  require "tmpdir"
+
+  LATEX = "platex -halt-on-error -interaction=nonstopmode -file-line-error"
+  DVIPDF = "dvipdfmx"
+
+  def initialize(tex_string)
+    @tex_string = tex_string
+  end
+
+  def to_pdf
+    tex_string_to_pdf(@tex_string)
+  end
+
+  private
+
+  def tex_string_to_pdf(tex_string, font_path = nil)
+    opt = "-f #{File.expand_path(font_path)}" if font_path
+
+    Dir.mktmpdir do |dir|
+      put_string_to_file(tex_string, "tmp.tex", dir)
+      system("cd #{dir}; (#{LATEX} tmp.tex && #{DVIPDF} #{opt} tmp.dvi) > errors.log 2>&1")
+      get_file_content("tmp.pdf", dir) ||
+        fail(get_file_content("errors.log", dir).to_s)
+    end
+  end
+
+  def put_string_to_file(string, filename, directory = ".")
+    path = File.expand_path(filename, directory)
+    File.write(path, string)
+  end
+
+  def get_file_content(filename, directory = ".")
+    path = File.expand_path(filename, directory)
+    return File.read(path) if File.exist?(path)
+    return nil
+  end
+end # class TeX
+
 def usage(exit_status = 1)
   name = File.basename($0)
   spc = " " * name.length
@@ -179,6 +219,8 @@ while /^-/ =~ ARGV[0]
     $DEBUG_FLAG = true
   when /^--fontfile=(.*)/
     $OPT_FONTFILE = $1
+  when /^--pdf/
+    $OPT_PDF = true
   when /^--rotate/
     $OPT_ROTATE = true
   when /^--table-type=(org|csv)$/
@@ -201,12 +243,25 @@ if $OPT_FONTFILE
   when /^\.otf/i
     envname = "OPENTYPEFONTS"
   end
-  STDERR.print "#{envname}=#{dirname}: dvipdfmx file.dvi\n"
+  path = File.expand_path(dirname)
+  STDERR.puts "#{envname}=#{path}:"
+  ENV[envname] = path
 end
 
 ab  = TableParser.parse(gets(nil), $OPT_TABLE_TYPE)
 # ab    = AddressBook.parse_table(table)
-puts ab.to_tex(DATA.read)
+if $OPT_PDF
+  begin
+    print TeX.new(ab.to_tex(DATA.read)).to_pdf
+  rescue => e
+    STDERR.puts "Error: #{e}"
+    exit 1
+  end
+else
+  puts ab.to_tex(DATA.read)
+end
+
+exit 0
 
 __END__
 % # Make addresser pdf for Japanese Nengajo
