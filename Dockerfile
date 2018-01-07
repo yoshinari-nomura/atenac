@@ -20,7 +20,9 @@ FROM paperist/alpine-texlive-ja
 MAINTAINER nom@quickhack.net
 
 RUN apk --no-cache add ruby
+RUN echo "Install atenac version 0.5.0"
 RUN wget -qO- https://raw.githubusercontent.com/yoshinari-nomura/atenac/master/atenac \
     > /usr/local/bin/atenac && chmod +x /usr/local/bin/atenac
+RUN mkdir -p /opt/fonts
 
 CMD ["bash"]
