@@ -47,7 +47,9 @@ class TableParser
   class ORG < Base
     def each_row(&block)
       colnames = []
-      source_string.split("\n").each do |line|
+      lines = source_string.force_encoding("UTF-8").split("\n")
+
+      lines.each do |line|
         next if line =~ /^\s*\|-/    # skip horizontal line |--
         next unless line =~ /^\s*\|/ # skip non-table line
 
