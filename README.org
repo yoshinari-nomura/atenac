@@ -25,13 +25,13 @@
   宛名 PDF を生成してみることができます．
 
   #+BEGIN_SRC shell-script
-    $ atenac --pdf README.org > example.pdf
+    $ atenac README.org > example.pdf
     $ open example.pdf
   #+END_SRC
 
   あるいは，
   #+BEGIN_SRC shell-script
-    $ atenac README.org > example.tex
+    $ atenac --tex README.org > example.tex
     $ platex example.tex
     $ dvipdfmx example.dvi
     $ open example.pdf
@@ -51,7 +51,7 @@
    #+BEGIN_SRC shell-script
      $ docker run -it --rm -v $PWD:/workdir nom4476/atenac
      (Invoke bash in Docker container)
-     # atenac --pdf address-file.org > atena.pdf
+     # atenac address-file.org > atena.pdf
    #+END_SRC
 
    なお Docker は，以下からインストールできます．
@@ -59,18 +59,45 @@
    + [[https://store.docker.com/editions/community/docker-ce-desktop-windows][Docker Community Edition for Windows - Docker Store]]
 
 * コマンドライン書式
-  : atenac [--debug] [--rotate] [--table-type=TYPE] [--pdf] [--fontfile=/path/to/font.{ttf,otf}] file.org > file.tex
+  #+BEGIN_EXAMPLE
+    Usage: atenac [--debug] [--rotate] [--table-type=TYPE] [--fontfile=FILE]
+                  ADDRESS_FILE > ADDRESS.pdf
+
+           atenac [--debug] [--rotate] [--table-type=TYPE] [--fontfile=FILE]
+                  --tex ADDRESS_FILE > ADDRESS.tex
+
+           atenac [--debug] [--rotate] [--fontfile=FILE] --server
+
+      + TYPE is type of ADDRESS_FILE: "org" (default) or "csv".
+        org file is assumed written in UTF-8, while csv is in Shift-JIS.
+
+      + FILE is path to your special font file: /path/to/font.{ttf,otf}
+        If you create TeX file with --tex option, you may need to set
+        environment variable TTFONTS or OPENTYPEFONTS to "/path/to"
+        when you invoke dvipdfmx by yourself to create pdf.
+
+      + If invoked with --server option, you can open http://localhost:3000
+        and upload your ADDRESS_FILE to get pdf.
+  #+END_EXAMPLE
 
   + オプション:
     + =--debug= :: デバッグのために郵便番号等の枠線を入れます
     + =--rotate= :: 縦書き用代替グリフを持っていないフォントのために長音などを90度回転します
     + =--table-type= :: =org= (デフォルト) か =csv= を指定します．
-    + =--pdf= :: TeX (デフォルト) ではなく，PDF を出力します．
+    + =--tex= :: PDF (デフォルト) ではなく，TeX を出力します．
     + =--fontfile= :: フォントファイルを直接 (ttf か otf) 指定します．
-                      これを指定した場合は，dvipdfmx が font を見付けられるように環境変数
-                      =TTFONTS= (ttf の場合) か =OPENTYPEFONTS= (otf の場合) に =/path/to= を追加して下さい．
+                      なお，このオプションと =--tex= を併用して，TeX ファイルを作った場合，
+                      dvipdfmx を別途起動する際には環境変数
+                      =TTFONTS= (ttf の場合) か =OPENTYPEFONTS= (otf の場合) に =/path/to=
+                      を追加しなければならないかもしれません．
+                      例えば，dvipdfmx が font を見付けられるように
                       : $ TTFONTS=/path/to: dvipdfmx file.dvi
-                      =--pdf= を指定時は不要です (dvipdfmx 使う際に内部で追加されています)．
+                      としてください．
+    + =--server= :: http://localhost:3000/ で Web サーバとして動作します．
+                    ブラウザで開くとフォームが現れるので，
+                    org か CSV をアップロードすると，葉書の宛名面 PDF が開くでしょう．
+                    コマンドラインからなら，以下のようにして変換できます．
+                    : curl -X POST http://localhost:3000 -F "file=@address.org" > address.pdf
 
 * 宛名テーブルの書式
   atenac に与える org-mode テーブルの書式を以下に説明します．
