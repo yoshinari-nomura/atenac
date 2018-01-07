@@ -64,7 +64,6 @@ class TableParser
       end
     end # each_rows
   end # class ORG
-
 end # class Table
 
 class Address
@@ -116,8 +115,7 @@ class Address
   def atena_entry(last_name, first_name, title)
     return "\\atenaentry{#{last_name}}{#{first_name}}{#{title}}"
   end
-
-end
+end # class Address
 
 class AddressBook
   TEX_ERB_TEMPLATE = DATA.read
@@ -145,9 +143,7 @@ class AddressBook
     address_book = self # binding self = address_book
     return TeX.new(tex_erb.result(binding))
   end
-
 end # class AddressBook
-
 
 class TeX
   require "tmpdir"
@@ -169,13 +165,11 @@ class TeX
 
   private
 
-  def tex_string_to_pdf(tex_string, font_path = nil)
-    opt = "-f #{File.expand_path(font_path)}" if font_path
-
+  def tex_string_to_pdf(tex_string)
     # mktmpdir to use PWD for the sake of Docker
     Dir.mktmpdir("atenac", ".") do |dir|
       put_string_to_file(tex_string, "tmp.tex", dir)
-      system("cd #{dir}; (#{LATEX} tmp.tex && #{DVIPDF} #{opt} tmp.dvi) > errors.log 2>&1")
+      system("cd #{dir}; (#{LATEX} tmp.tex && #{DVIPDF} tmp.dvi) > errors.log 2>&1")
       get_file_content("tmp.pdf", dir) ||
         fail(get_file_content("errors.log", dir).to_s)
     end
@@ -243,7 +237,6 @@ module WebService
       @server.start
     end
   end
-
 end # module WebService
 
 def usage(exit_status = 1)
