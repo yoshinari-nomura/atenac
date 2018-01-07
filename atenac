@@ -172,7 +172,8 @@ class TeX
   def tex_string_to_pdf(tex_string, font_path = nil)
     opt = "-f #{File.expand_path(font_path)}" if font_path
 
-    Dir.mktmpdir do |dir|
+    # mktmpdir to use PWD for the sake of Docker
+    Dir.mktmpdir("atenac", ".") do |dir|
       put_string_to_file(tex_string, "tmp.tex", dir)
       system("cd #{dir}; (#{LATEX} tmp.tex && #{DVIPDF} #{opt} tmp.dvi) > errors.log 2>&1")
       get_file_content("tmp.pdf", dir) ||
