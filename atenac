@@ -120,6 +120,8 @@ class Address
 end
 
 class AddressBook
+  TEX_ERB_TEMPLATE = DATA.read
+
   include Enumerable
   attr_accessor :me
 
@@ -138,10 +140,10 @@ class AddressBook
     @addresses << o
   end
 
-  def to_tex(tex_erb_template)
+  def to_tex(tex_erb_template = TEX_ERB_TEMPLATE)
     tex_erb = ERB.new(tex_erb_template, nil, "-")
     address_book = self # binding self = address_book
-    return tex_erb.result(binding)
+    return TeX.new(tex_erb.result(binding))
   end
 
 end # class AddressBook
@@ -159,6 +161,10 @@ class TeX
 
   def to_pdf
     tex_string_to_pdf(@tex_string)
+  end
+
+  def to_s
+    @tex_string
   end
 
   private
@@ -254,13 +260,13 @@ ab  = TableParser.parse(gets(nil), $OPT_TABLE_TYPE)
 # ab    = AddressBook.parse_table(table)
 if $OPT_PDF
   begin
-    print TeX.new(ab.to_tex(DATA.read)).to_pdf
+    print ab.to_tex.to_pdf
   rescue => e
     STDERR.puts "Error: #{e}"
     exit 1
   end
 else
-  puts ab.to_tex(DATA.read)
+  puts ab.to_tex
 end
 
 exit 0
