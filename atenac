@@ -274,8 +274,8 @@ while /^-/ =~ ARGV[0]
     $DEBUG_FLAG = true
   when /^--fontfile=(.*)/
     $OPT_FONTFILE = $1
-  when /^--pdf/
-    $OPT_PDF = true
+  when /^--tex/
+    $OPT_TEX = true
   when /^--rotate/
     $OPT_ROTATE = true
   when /^--server/
@@ -311,15 +311,15 @@ if $OPT_SERVER
 
 else
   ab  = TableParser.parse(gets(nil), $OPT_TABLE_TYPE)
-  if $OPT_PDF
+  if $OPT_TEX
+    puts ab.to_tex
+  else
     begin
       print ab.to_tex.to_pdf
     rescue => e
       STDERR.puts "Error: #{e}"
       exit 1
     end
-  else
-    puts ab.to_tex
   end
 end
 
