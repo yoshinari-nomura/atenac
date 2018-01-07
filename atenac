@@ -193,6 +193,59 @@ class TeX
   end
 end # class TeX
 
+module WebService
+  require 'webrick'
+
+  class PdfGenerator < WEBrick::HTTPServlet::AbstractServlet
+    def do_POST(request, response)
+      filename = request.query['file'].filename
+      table_type = if filename =~ /\.csv$/i then :csv else :org end
+
+      address_book = TableParser.parse(
+        request.query['file'].to_s,
+        table_type
+      )
+      embed_file_in_response(
+        response,
+        filename.sub(/\.[^.]*$/, ".pdf"),
+        address_book.to_tex.to_pdf
+      )
+    end
+
+    def do_GET(request, response)
+      response.body = <<-EOF
+        <form method="POST" action="/" enctype="multipart/form-data">
+          Upload your address book (csv or org): <input type="file" name="file"/><br/>
+          <input type="submit" value="convert"/>
+        </form>
+      EOF
+    end
+
+    private
+
+    def embed_file_in_response(response, filename, file_content)
+      response.content_type = ::WEBrick::HTTPUtils.mime_type(filename, ::WEBrick::HTTPUtils::DefaultMimeTypes)
+      response.body = file_content
+      return response
+    end
+  end
+
+  class Server
+    def initialize(port = 3000)
+      @server = ::WEBrick::HTTPServer.new(:Port => port,
+                                          :BindAddress => '0.0.0.0'
+                                         )
+      trap("INT") { @server.shutdown }
+      @server.mount('/', PdfGenerator)
+    end
+
+    def start
+      @server.start
+    end
+  end
+
+end # module WebService
+
 def usage(exit_status = 1)
   name = File.basename($0)
   spc = " " * name.length
@@ -232,6 +285,8 @@ while /^-/ =~ ARGV[0]
     $OPT_PDF = true
   when /^--rotate/
     $OPT_ROTATE = true
+  when /^--server/
+    $OPT_SERVER = true
   when /^--table-type=(org|csv)$/
     $OPT_TABLE_TYPE = $1.to_sym
   else
@@ -257,17 +312,22 @@ if $OPT_FONTFILE
   ENV[envname] = path
 end
 
-ab  = TableParser.parse(gets(nil), $OPT_TABLE_TYPE)
-# ab    = AddressBook.parse_table(table)
-if $OPT_PDF
-  begin
-    print ab.to_tex.to_pdf
-  rescue => e
-    STDERR.puts "Error: #{e}"
-    exit 1
-  end
+if $OPT_SERVER
+  puts "Server mode..."
+  WebService::Server.new.start
+
 else
-  puts ab.to_tex
+  ab  = TableParser.parse(gets(nil), $OPT_TABLE_TYPE)
+  if $OPT_PDF
+    begin
+      print ab.to_tex.to_pdf
+    rescue => e
+      STDERR.puts "Error: #{e}"
+      exit 1
+    end
+  else
+    puts ab.to_tex
+  end
 end
 
 exit 0
