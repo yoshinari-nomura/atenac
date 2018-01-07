@@ -1,6 +1,8 @@
 #!/usr/bin/env ruby
 # -*- encoding: utf-8 -*-
 
+VERSION = "0.5.0"
+
 require "erb"
 
 class TableParser
@@ -243,13 +245,26 @@ def usage(exit_status = 1)
   name = File.basename($0)
   spc = " " * name.length
   STDERR.print <<EOF
-Usage: #{File.basename($0)} [--debug] [--rotate] [--table-type=TYPE]
-       #{spc} [--fontfile=FILE] ADDRESS.org > ADDRESS.tex
+#{name} version #{VERSION} https://github.com/yoshinari-nomura/atenac
 
-  + TYPE: "org" (default) or "csv"
-  + FILE: /path/to/font.{ttf,otf}
-    You need to set environment variable TTFONTS or OPENTYPEFONTS
-    to "/path/to:" on invoking dvipdfmx.
+Usage: #{name} [--debug] [--rotate] [--table-type=TYPE] [--fontfile=FILE]
+       #{spc} ADDRESS_FILE > ADDRESS.pdf
+
+       #{name} [--debug] [--rotate] [--table-type=TYPE] [--fontfile=FILE]
+       #{spc} --tex ADDRESS_FILE > ADDRESS.tex
+
+       #{name} [--debug] [--rotate] [--fontfile=FILE] --server
+
+  + TYPE is type of ADDRESS_FILE: "org" (default) or "csv".
+    org file is assumed written in UTF-8, while csv is in Shift-JIS.
+
+  + FILE is path to your special font file: /path/to/font.{ttf,otf}
+    If you create TeX file with --tex option, you may need to set
+    environment variable TTFONTS or OPENTYPEFONTS to "/path/to"
+    when you invoke dvipdfmx by yourself to create pdf.
+
+  + If invoked with --server option, you can open http://localhost:3000
+    and upload your ADDRESS_FILE to get pdf.
 EOF
   exit exit_status
 end
@@ -282,6 +297,9 @@ while /^-/ =~ ARGV[0]
     $OPT_SERVER = true
   when /^--table-type=(org|csv)$/
     $OPT_TABLE_TYPE = $1.to_sym
+  when /^--version/
+    puts VERSION
+    exit 0
   else
     usage()
   end
