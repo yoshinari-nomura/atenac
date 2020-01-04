@@ -16,7 +16,7 @@ class TableParser
       when :csv
         CSV.new(source_string)
       else
-        Raise "Unknown table type #{type}."
+        raise "Unknown table type #{type}."
       end
 
     parser.each_row do |address|
