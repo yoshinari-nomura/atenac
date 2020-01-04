@@ -210,10 +210,12 @@ module WebService
 
     def do_GET(request, response)
       response.body = <<-EOF
+        <html>
         <form method="POST" action="/" enctype="multipart/form-data">
           Upload your address book (csv or org): <input type="file" name="file"/><br/>
           <input type="submit" value="convert"/>
         </form>
+        </html>
       EOF
     end
 
