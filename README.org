@@ -1,7 +1,7 @@
 #+TITLE: atenac の利用方法
 #+AUTHOR: Yoshinari Nomura
 #+EMAIL:
-#+DATE: 2014-01-05
+#+DATE: 2014-01-05 (2021-12-19 更新)
 #+OPTIONS: H:3 num:2 toc:nil
 #+OPTIONS: ^:nil @:t \n:nil ::t |:t f:t TeX:t
 #+OPTIONS: skip:nil
@@ -16,7 +16,7 @@
 
 * atenac とは
   atenac は，Ruby + TeX を使った葉書の宛名書スクリプトです．
-  org-mode のテーブルを含むテキストもしくは，CSV ファイルを入力として，
+  org-mode のテーブルもしくは CSV ファイルを入力として，
   主に年賀状に利用する宛名面の PDF を生成します．
   スクリプトは，Ruby で記述され，バックエンドに TeX (platex) を利用しています．
   想定するユーザは，Emacs (org-mode), TeX, Ruby を普段から利用する人です．
@@ -38,6 +38,8 @@
   #+END_SRC
 
   すると，こんな感じになります: [[file:examples/example.pdf][example.pdf]]．(=--debug= 付き: [[file:examples/example-debug.pdf][example-debug.pdf]])
+
+  CSV をアップロードしたら PDF を作ってくれる Web サーバとして動作させることもできます．
 
 * インストール
 ** Ruby/pLaTeX 環境が手元にある場合
@@ -69,7 +71,7 @@
            atenac [--debug] [--rotate] [--fontfile=FILE] --server
 
       + TYPE is type of ADDRESS_FILE: "org" (default) or "csv".
-        org file is assumed written in UTF-8, while csv is in Shift-JIS.
+        org file is assumed written in UTF-8, while csv is in Shift-JIS or UTF-8.
 
       + FILE is path to your special font file: /path/to/font.{ttf,otf}
         If you create TeX file with --tex option, you may need to set
