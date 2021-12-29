@@ -38,7 +38,11 @@ class TableParser
   class CSV < Base
     def each_row(&block)
       require "csv"
-      lines = source_string.force_encoding("Shift_JIS").encode("UTF-8")
+      lines = begin
+                source_string.encode("UTF-8", "Shift_JIS")
+              rescue
+                source_string.encode("UTF-8", "UTF-8")
+              end
 
       ::CSV.parse(lines, :headers => true) do |row|
         yield Address.new(row.to_hash)
@@ -258,7 +262,7 @@ Usage: #{name} [--debug] [--rotate] [--table-type=TYPE] [--fontfile=FILE]
        #{name} [--debug] [--rotate] [--fontfile=FILE] --server
 
   + TYPE is type of ADDRESS_FILE: "org" (default) or "csv".
-    org file is assumed written in UTF-8, while csv is in Shift-JIS.
+    org file is assumed written in UTF-8, while csv is in Shift-JIS or UTF-8.
 
   + FILE is path to your special font file: /path/to/font.{ttf,otf}
     If you create TeX file with --tex option, you may need to set
